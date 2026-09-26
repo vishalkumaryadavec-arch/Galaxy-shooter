@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#050816">
+<title>Carrom - Galaxy AI</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100%;background:#050816;font-family:Arial,sans-serif;color:#fff;touch-action:none;overflow:hidden}
+body{background:radial-gradient(circle at 50% 20%,rgba(60,0,120,.45),rgba(5,8,22,.96) 70%)}
+canvas{display:block}
+#ui{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:10px 14px;font-size:15px;font-weight:bold;pointer-events:none;text-shadow:0 0 6px #0ff;z-index:3}
+a.home{position:fixed;top:46px;left:14px;z-index:5;background:rgba(255,255,255,.08);border:1px solid rgba(0,255,255,.4);color:#0ff;border-radius:20px;padding:6px 13px;font-size:13px;font-weight:bold;text-decoration:none;text-shadow:0 0 6px #0ff}
+#status{position:fixed;top:46px;right:14px;z-index:3;font-size:13px;font-weight:bold;color:#0ff;text-shadow:0 0 6px #0ff;pointer-events:none;text-align:right;max-width:60%}
+#over{position:fixed;inset:0;background:rgba(5,8,22,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;text-align:center;padding:20px}
+#over h2{font-size:30px;color:#ff0;text-shadow:0 0 20px #ff0;margin-bottom:8px}
+#over p{color:#aac;margin:6px 0;font-size:16px}
+#over b{color:#ff0;text-shadow:0 0 8px #ff0}
+#over button{margin-top:16px;padding:14px 44px;font-size:19px;font-weight:bold;border:none;border-radius:28px;background:linear-gradient(90deg,#0ff,#f0f);color:#050816;box-shadow:0 0 22px #f0f}
+#over a{margin-top:16px;color:#0ff;text-decoration:none;font-size:15px}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><span>⚪ Tum: <span id="mc">0</span></span><span style="color:#f8f">👑 Rani: <span id="qn">-</span></span><span>⚫ AI: <span id="ac">0</span></span></div>
+<a class="home" href="index.html">🏠 HOME</a>
+<div id="status">Tumhari baari - khinch kar chhodo</div>
+<div id="over" class="hide"><h2 id="ot"></h2><p id="os"></p><p>Jeet: <b id="ow">0</b> • Haar: <b id="ol">0</b></p><button id="again">🔄 PHIR SE</button><a href="index.html">🏠 Game Hub pe wapas</a></div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),$=id=>document.getElementById(id);
+let W,H;function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}resize();addEventListener('resize',resize);
+let AC;function beep(f,d,t='square',v=.05){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
+let wins=+localStorage.getItem('cr_wins')||0,losses=+localStorage.getItem('cr_losses')||0;
+// board geometry
+let bs,bx,by,M,PR,CR,SR;
+function geom(){bs=Math.min(W-14,460);bx=(W-bs)/2;by=Math.max(70,(H-bs)/2);M=bs*.055;PR=bs*.048;CR=bs*.026;SR=bs*.036}
+geom();
+let discs=[],striker,turn='me',busy=false,over=false,aim=null,myPocketed=0,aiPocketed=0,queenWith='-';
+function P(i){const m=M+PR*.6;const c=[[bx+m,by+m],[bx+bs-m,by+m],[bx+m,by+bs-m],[bx+bs-m,by+bs-m]];return c[i]}
+function baseY(who){return who==='me'?by+bs-M-bs*.09:by+M+bs*.09}
+function setup(){
+  discs=[];myPocketed=0;aiPocketed=0;queenWith='-';
+  const cx=bx+bs/2,cy=by+bs/2,R2=CR*2+.6;
+  discs.push({x:cx,y:cy,r:CR,type:'queen',vx:0,vy:0,on:true});
+  // inner ring 6 alternating, outer ring 12 alternating
+  for(let i=0;i<6;i++){const a=i/6*6.283+ (Math.PI/6);discs.push({x:cx+Math.cos(a)*R2,y:cy+Math.sin(a)*R2,r:CR,type:i%2?'black':'white',vx:0,vy:0,on:true})}
+  for(let i=0;i<12;i++){const a=i/12*6.283;discs.push({x:cx+Math.cos(a)*R2*2,y:cy+Math.sin(a)*R2*2,r:CR,type:i%2?'black':'white',vx:0,vy:0,on:true})}
+  striker={x:bx+bs/2,y:baseY('me'),r:SR,type:'striker',vx:0,vy:0,on:true};
+  discs.push(striker);
+  turn='me';busy=false;aim=null;over=false;
+  $('status').textContent='Tumhari baari - khinch kar chhodo';
+  hud();
+}
+function hud(){$('mc').textContent=myPocketed+'/9';$('ac').textContent=aiPocketed+'/9';$('qn').textContent=queenWith}
+function allStop(){return discs.every(d=>!d.on||(Math.hypot(d.vx,d.vy)<.06))}
+function physics(){
+  const m=M;
+  for(const d of discs){if(!d.on)continue;
+    d.x+=d.vx;d.y+=d.vy;d.vx*=.982;d.vy*=.982;
+    if(Math.hypot(d.vx,d.vy)<.06){d.vx=0;d.vy=0}
+    // pockets
+    for(let i=0;i<4;i++){const[px,py]=P(i);
+      if(Math.hypot(d.x-px,d.y-py)<PR){pocket(d);break}}
+    if(!d.on)continue;
+    // walls
+    if(d.x<bx+m+d.r){d.x=bx+m+d.r;d.vx=Math.abs(d.vx)*.72;beep(180,.04,'square',.02)}
+    if(d.x>bx+bs-m-d.r){d.x=bx+bs-m-d.r;d.vx=-Math.abs(d.vx)*.72;beep(180,.04,'square',.02)}
+    if(d.y<by+m+d.r){d.y=by+m+d.r;d.vy=Math.abs(d.vy)*.72;beep(180,.04,'square',.02)}
+    if(d.y>by+bs-m-d.r){d.y=by+bs-m-d.r;d.vy=-Math.abs(d.vy)*.72;beep(180,.04,'square',.02)}
+  }
+  // disc collisions
+  for(let i=0;i<discs.length;i++)for(let j=i+1;j<discs.length;j++){
+    const a=discs[i],b=discs[j];if(!a.on||!b.on)continue;
+    const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),rr=a.r+b.r;
+    if(d<rr&&d>0){
+      const nx=dx/d,ny=dy/d,ov=(rr-d)/2;
+      a.x-=nx*ov;a.y-=ny*ov;b.x+=nx*ov;b.y+=ny*ov;
+      const dot=(a.vx-b.vx)*nx+(a.vy-b.vy)*ny;
+      if(dot>0){a.vx-=dot*nx;a.vy-=dot*ny;b.vx+=dot*nx;b.vy+=dot*ny;
+        if(dot>1.2)beep(300+dot*40,.05,'triangle',.04)}
+    }
+  }
+}
+let shotPocketed=[];
+function pocket(d){
+  d.on=false;d.vx=0;d.vy=0;beep(900,.12,'sine',.06);if(navigator.vibrate)navigator.vibrate(30);
+  if(d.type==='striker'){shotPocketed.push('striker');return}
+  shotPocketed.push(d.type);
+  if(d.type==='white'){myPocketed++}
+  else if(d.type==='black'){aiPocketed++}
+  else{queenWith=turn==='me'?'Tum 👑':'AI 👑';beep(1300,.2,'sine',.07)}
+  hud();
+}
+function resolveTurn(){
+  const mine=turn==='me'?'white':'black';
+  const got=shotPocketed.includes(mine);
+  const foul=shotPocketed.includes('striker');
+  shotPocketed=[];
+  // striker back on baseline
+  striker.on=true;striker.x=bx+bs/2;striker.y=baseY(turn);striker.vx=0;striker.vy=0;
+  // win check
+  if(myPocketed>=9)return gameOver(true);
+  if(aiPocketed>=9)return gameOver(false);
+  if(foul){
+    $('status').textContent='Striker pocket hua! Foul 😬';
+    // penalty: one pocketed coin back
+    const back=turn==='me'?'white':'black';
+    const cx=bx+bs/2,cy=by+bs/2;
+    let placed=false;
+    for(let ring=1;ring<6&&!placed;ring++){for(let k=0;k<ring*6;k++){const a=k/(ring*6)*6.283;
+      const x=cx+Math.cos(a)*ring*CR*2.4,y=cy+Math.sin(a)*ring*CR*2.4;
+      if(x>bx+M+CR&&x<bx+bs-M-CR&&y>by+M+CR&&y<by+bs-M-CR&&!discs.some(o=>o.on&&Math.hypot(o.x-x,o.y-y)<CR*2.2)){
+        // revive a pocketed coin
+        const dead=discs.find(o=>!o.on&&o.type===back);
+        if(dead){dead.on=true;dead.x=x;dead.y=y;dead.vx=0;dead.vy=0;
+          if(back==='white')myPocketed--;else aiPocketed--;hud();placed=true;break}}}
+      }
+    nextTurn();return;
+  }
+  if(got){$('status').textContent=turn==='me'?'Kamaal! Ek aur chance 🎯':'AI pocket kar gaya, fir se';busy=false;if(turn==='ai')setTimeout(aiShoot,900)}
+  else nextTurn();
+}
+function nextTurn(){
+  turn=turn==='me'?'ai':'me';
+  striker.x=bx+bs/2;striker.y=baseY(turn);
+  if(turn==='ai'){$('status').textContent='AI nishana laga raha hai...';busy=true;setTimeout(aiShoot,900)}
+  else{$('status').textContent='Tumhari baari - khinch kar chhodo';busy=false}
+}
+function aiShoot(){
+  if(over)return;
+  const mine=discs.filter(d=>d.on&&d.type==='black');
+  const targets=mine.length?mine:discs.filter(d=>d.on&&d.type==='queen');
+  if(!targets.length){nextTurn();return}
+  // nearest own coin to striker
+  let tc=targets[0],td=1e9;for(const d of targets){const dd=Math.hypot(d.x-striker.x,d.y-striker.y);if(dd<td){td=dd;tc=d}}
+  // nearest pocket to that coin
+  let bp=0,bd=1e9;for(let i=0;i<4;i++){const[px,py]=P(i);const dd=Math.hypot(tc.x-px,tc.y-py);if(dd<bd){bd=dd;bp=i}}
+  const[px,py]=P(bp);
+  const ux=(px-tc.x)/bd,uy=(py-tc.y)/bd;
+  const gx=tc.x-ux*(CR+SR+1),gy=tc.y-uy*(CR+SR+1);
+  const dx=gx-striker.x,dy=gy-striker.y,dd=Math.hypot(dx,dy)||1;
+  const err=(Math.random()-.5)*.14;
+  const ca=Math.cos(err),sa=Math.sin(err);
+  const ndx=dx*ca-dy*sa,ndy=dx*sa+dy*ca;
+  const pw=Math.min(13,Math.max(5.5,dd/16));
+  striker.vx=ndx/dd*pw;striker.vy=ndy/dd*pw;
+  beep(500,.08,'square',.05);
+}
+function gameOver(iWon){
+  over=true;
+  if(iWon){wins++;localStorage.setItem('cr_wins',wins);$('ot').textContent='🎉 TUM JEET GAYE!';$('os').textContent='Saari white coins pocket! Shabash 🏆';beep(880,.2,'sine',.07)}
+  else{losses++;localStorage.setItem('cr_losses',losses);$('ot').textContent='😞 AI JEET GAYA';$('os').textContent='Agli baar rani aur coins pe dhyan!';beep(200,.4,'sawtooth',.08)}
+  $('ow').textContent=wins;$('ol').textContent=losses;
+  setTimeout(()=>$('over').classList.remove('hide'),800);
+}
+function draw(){
+  ctx.fillStyle='#050816';ctx.fillRect(0,0,W,H);
+  // board
+  ctx.save();
+  ctx.shadowBlur=24;ctx.shadowColor='rgba(0,255,255,.35)';
+  ctx.fillStyle='#1a1030';ctx.fillRect(bx-6,by-6,bs+12,bs+12);
+  ctx.shadowBlur=0;
+  const g=ctx.createRadialGradient(bx+bs/2,by+bs/2,bs*.1,bx+bs/2,by+bs/2,bs*.7);
+  g.addColorStop(0,'#3d2a6b');g.addColorStop(1,'#1e1440');
+  ctx.fillStyle=g;ctx.fillRect(bx,by,bs,bs);
+  ctx.strokeStyle='#0ff';ctx.lineWidth=2;ctx.strokeRect(bx+M,by+M,bs-2*M,bs-2*M);
+  // center circles
+  ctx.strokeStyle='rgba(255,0,255,.6)';ctx.beginPath();ctx.arc(bx+bs/2,by+bs/2,bs*.1,0,6.29);ctx.stroke();
+  ctx.beginPath();ctx.arc(bx+bs/2,by+bs/2,bs*.02,0,6.29);ctx.stroke();
+  // baselines
+  ctx.strokeStyle='rgba(255,255,255,.35)';
+  ctx.beginPath();ctx.moveTo(bx+bs*.16,baseY('me'));ctx.lineTo(bx+bs*.84,baseY('me'));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(bx+bs*.16,baseY('ai'));ctx.lineTo(bx+bs*.84,baseY('ai'));ctx.stroke();
+  // pockets
+  for(let i=0;i<4;i++){const[px,py]=P(i);
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(px,py,PR,0,6.29);ctx.fill();
+    ctx.strokeStyle='#f0f';ctx.lineWidth=2;ctx.shadowBlur=12;ctx.shadowColor='#f0f';ctx.stroke();ctx.shadowBlur=0}
+  ctx.restore();
+  // discs
+  for(const d of discs){if(!d.on)continue;
+    const blk=d.type==='black';
+    const col=d.type==='white'?'#e8ecff':blk?'#454e66':d.type==='queen'?'#ff2d55':'#ffd60a';
+    ctx.save();ctx.shadowBlur=blk?14:10;ctx.shadowColor=blk?'#aab6ff':col;
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,6.29);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.lineWidth=2;ctx.strokeStyle=blk?'#dfe6ff':'#889';
+    ctx.beginPath();ctx.arc(d.x,d.y,d.r-1,0,6.29);ctx.stroke();
+    ctx.lineWidth=1.5;ctx.strokeStyle=blk?'#8fa0cc':'#889';
+    ctx.beginPath();ctx.arc(d.x,d.y,d.r*.55,0,6.29);ctx.stroke();ctx.restore();
+  }
+  // aim
+  if(aim&&turn==='me'&&!busy){
+    const dx=striker.x-aim.x,dy=striker.y-aim.y,d=Math.hypot(dx,dy);
+    if(d>12){
+      const pw=Math.min(d/14,13);
+      const ux=dx/d,uy=dy/d;
+      ctx.save();ctx.strokeStyle='#0ff';ctx.setLineDash([6,6]);ctx.lineWidth=2;
+      ctx.shadowBlur=8;ctx.shadowColor='#0ff';
+      ctx.beginPath();ctx.moveTo(striker.x,striker.y);ctx.lineTo(striker.x+ux*pw*22,striker.y+uy*pw*22);ctx.stroke();
+      ctx.setLineDash([]);
+      // power bar
+      ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(bx,by+bs+14,bs,10);
+      ctx.fillStyle=pw>9?'#f44':'#0ff';ctx.shadowColor='#f0f';ctx.fillRect(bx,by+bs+14,bs*pw/13,10);
+      ctx.restore();
+    }
+  }
+  if(!over&&turn==='me'&&!busy&&!aim&&allStop()){
+    ctx.font='13px Arial';ctx.textAlign='center';ctx.fillStyle='#9ad';
+    ctx.fillText('Kahin bhi daba ke piche khincho, chhod do = shot 🎯',W/2,by+bs+44);
+  }
+}
+function loop(){
+  if(!over){
+    const wasMoving=!allStop();
+    physics();
+    if(wasMoving&&allStop()&&busy){/* ai waiting handled by timeout */}
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+// shot resolution watcher
+let wasMoving=false;
+setInterval(()=>{
+  if(over)return;
+  const moving=!allStop();
+  if(wasMoving&&!moving){resolveTurn()}
+  wasMoving=moving;
+},150);
+// input
+let dragStart=null;
+cv.addEventListener('pointerdown',e=>{
+  if(turn!=='me'||busy||over||!allStop())return;
+  dragStart={x:e.clientX,y:e.clientY};aim={x:e.clientX,y:e.clientY};
+});
+cv.addEventListener('pointermove',e=>{if(dragStart)aim={x:e.clientX,y:e.clientY}});
+cv.addEventListener('pointerup',e=>{
+  if(!dragStart)return;
+  const dx=striker.x-e.clientX,dy=striker.y-e.clientY,d=Math.hypot(dx,dy);
+  dragStart=null;aim=null;
+  if(d<14)return;
+  const pw=Math.min(d/14,13);
+  striker.vx=dx/d*pw;striker.vy=dy/d*pw;
+  busy=true;beep(500,.08,'square',.05);
+  $('status').textContent='Shot! 🎯';
+});
+$('again').onclick=()=>{$('over').classList.add('hide');setup()};
+setup();
+loop();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
