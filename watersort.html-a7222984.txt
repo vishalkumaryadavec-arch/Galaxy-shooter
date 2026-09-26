@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#050816">
+<title>Water Sort - Galaxy AI</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100%;background:#050816;font-family:Arial,sans-serif;color:#fff;touch-action:manipulation}
+body{background:radial-gradient(circle at 50% 25%,rgba(60,0,120,.45),rgba(5,8,22,.96) 70%);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px;user-select:none;-webkit-user-select:none}
+.top{width:100%;max-width:460px;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+a.home{background:rgba(255,255,255,.08);border:1px solid rgba(0,255,255,.4);color:#0ff;border-radius:20px;padding:8px 14px;font-size:13px;font-weight:bold;text-decoration:none;text-shadow:0 0 6px #0ff}
+h1{font-size:24px;letter-spacing:2px;background:linear-gradient(90deg,#0ff,#f0f,#0ff);background-size:200%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 3s linear infinite}
+@keyframes shine{to{background-position:200%}}
+#info{display:flex;gap:18px;margin:10px 0;font-size:14px;color:#9ad}
+#info b{color:#ff0;text-shadow:0 0 6px #ff0}
+#tubes{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 10px;max-width:420px;margin:14px 0}
+.tube{width:44px;height:150px;border:3px solid rgba(255,255,255,.35);border-top:none;border-radius:0 0 22px 22px;display:flex;flex-direction:column-reverse;overflow:hidden;transition:transform .15s,border-color .15s;background:rgba(255,255,255,.04)}
+.tube.sel{transform:translateY(-16px);border-color:#0ff;box-shadow:0 0 18px #0ff}
+.tube.done{border-color:#ff0;box-shadow:0 0 14px rgba(255,255,0,.6)}
+.unit{flex:1;width:100%;transition:height .2s}
+#btns{display:flex;gap:12px;margin-top:8px}
+#btns button{padding:10px 22px;border-radius:24px;border:1px solid rgba(0,255,255,.4);background:rgba(255,255,255,.06);color:#0ff;font-size:15px;font-weight:bold}
+#msg{margin-top:14px;font-size:17px;font-weight:bold;color:#0ff;text-shadow:0 0 10px #0ff;min-height:24px;text-align:center}
+#win{position:fixed;inset:0;background:rgba(5,8,22,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5;text-align:center;padding:20px}
+#win h2{font-size:30px;color:#ff0;text-shadow:0 0 20px #ff0;margin-bottom:8px}
+#win p{color:#aac;margin:6px 0;font-size:15px}
+#win button{margin-top:16px;padding:14px 44px;font-size:19px;font-weight:bold;border:none;border-radius:28px;background:linear-gradient(90deg,#0ff,#f0f);color:#050816;box-shadow:0 0 22px #f0f}
+#win a{margin-top:16px;color:#0ff;text-decoration:none;font-size:15px}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="top"><a class="home" href="index.html">🏠 HOME</a><h1>WATER SORT</h1><span style="width:66px"></span></div>
+<div id="info"><span>Level: <b id="lv">1</b></span><span>Moves: <b id="mv">0</b></span><span>Best: <b id="bst">-</b></span></div>
+<div id="tubes"></div>
+<div id="btns"><button id="undo">↩️ UNDO</button><button id="re">🔁 RESTART</button></div>
+<div id="msg">Tube chuno, phir jahan daalna hai wo chuno</div>
+<div id="win" class="hide"><h2>🎉 LEVEL CLEAR!</h2><p id="wstats"></p><button id="next">➡ AGLE LEVEL</button><a href="index.html">🏠 Game Hub pe wapas</a></div>
+<script>
+const $=id=>document.getElementById(id);
+const COLORS=['#00ffff','#ff00ff','#ffff00','#44ff44','#ff8800','#aa44ff','#ff4444','#4488ff','#ff88aa'];
+const CAP=4;
+let level=+localStorage.getItem('ws_level')||1;
+let best=+localStorage.getItem('ws_best')||0;
+let tubes=[],sel=-1,moves=0,hist=[];
+let AC;function beep(f,d,t='square',v=.05){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
+
+function genLevel(lv){
+  const n=Math.min(3+lv,9); // colors: level1=4 ... level6+=9
+  // start solved, scramble with random single-unit moves -> solvable
+  tubes=[];
+  for(let c=0;c<n;c++)tubes.push(Array(CAP).fill(c));
+  tubes.push([]);tubes.push([]);
+  let last='';
+  const steps=60+lv*25;
+  for(let s=0;s<steps;s++){
+    const from=Math.floor(Math.random()*tubes.length);
+    if(!tubes[from].length)continue;
+    const to=Math.floor(Math.random()*tubes.length);
+    if(to===from||tubes[to].length>=CAP)continue;
+    if(last===to+'-'+from){continue}
+    // move only ONE unit so mixing is fine-grained
+    tubes[to].push(tubes[from].pop());
+    last=from+'-'+to;
+  }
+  // if accidentally already solved, scramble more
+  if(isWin())genLevel(lv);
+}
+function topRun(t){if(!t.length)return 0;const c=t[t.length-1];let n=0;for(let i=t.length-1;i>=0&&t[i]===c;i--)n++;return n}
+function canPour(a,b){
+  if(a===b||!tubes[a].length||tubes[b].length>=CAP)return 0;
+  const c=tubes[a][tubes[a].length-1];
+  if(tubes[b].length&&tubes[b][tubes[b].length-1]!==c)return 0;
+  return Math.min(topRun(tubes[a]),CAP-tubes[b].length);
+}
+function pour(a,b){
+  const n=canPour(a,b);if(!n)return false;
+  hist.push({a,b,n});
+  for(let i=0;i<n;i++)tubes[b].push(tubes[a].pop());
+  moves++;beep(500+n*80,.12,'sine',.06);
+  if(navigator.vibrate)navigator.vibrate(30);
+  return true;
+}
+function isDoneTube(t){return t.length===CAP&&t.every(x=>x===t[0])}
+function isWin(){return tubes.every(t=>t.length===0||isDoneTube(t))}
+function render(){
+  const box=$('tubes');box.innerHTML='';
+  tubes.forEach((t,i)=>{
+    const d=document.createElement('div');
+    d.className='tube'+(i===sel?' sel':'')+(isDoneTube(t)?' done':'');
+    t.forEach(c=>{const u=document.createElement('div');u.className='unit';u.style.background='linear-gradient(180deg,'+COLORS[c]+','+COLORS[c]+'cc)';u.style.boxShadow='0 0 8px '+COLORS[c];d.appendChild(u)});
+    d.onclick=()=>tap(i);
+    box.appendChild(d);
+  });
+  $('lv').textContent=level;$('mv').textContent=moves;$('bst').textContent=best||'-';
+}
+function tap(i){
+  if(sel===-1){
+    if(!tubes[i].length)return;
+    sel=i;beep(700,.06,'square',.04);
+  }else if(sel===i){
+    sel=-1;
+  }else{
+    if(pour(sel,i)){
+      sel=-1;
+      if(isWin()){win()}
+    }else{
+      beep(150,.15,'sawtooth',.05);$('msg').textContent='Ye nahi hoga! Same rang ya khaali tube chuno';
+      sel=tubes[i].length?i:-1;
+    }
+  }
+  render();
+}
+function win(){
+  beep(880,.15,'sine',.07);setTimeout(()=>beep(1320,.25,'sine',.07),150);setTimeout(()=>beep(1760,.35,'sine',.07),350);
+  if(navigator.vibrate)navigator.vibrate([80,60,120]);
+  best=Math.max(best,level);localStorage.setItem('ws_best',best);
+  const nl=level+1;localStorage.setItem('ws_level',nl);
+  $('wstats').textContent='Level '+level+' • '+moves+' moves mein complete!';
+  $('win').classList.remove('hide');
+}
+$('undo').onclick=()=>{const h=hist.pop();if(!h){beep(150,.1,'sawtooth',.04);return}for(let i=0;i<h.n;i++)tubes[h.a].push(tubes[h.b].pop());moves--;sel=-1;beep(400,.08,'triangle',.05);render()};
+$('re').onclick=()=>{start();beep(300,.1,'triangle',.05)};
+$('next').onclick=()=>{level++;$('win').classList.add('hide');start()};
+function start(){moves=0;hist=[];sel=-1;$('msg').textContent='Tube chuno, phir jahan daalna hai wo chuno';genLevel(level);render()}
+start();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
