@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050816">
+<title>Privacy Policy - Galaxy AI Game Hub</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050816;color:#dce6f5;font-family:Arial,sans-serif;line-height:1.75;min-height:100vh}
+.top{position:sticky;top:0;display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(5,8,22,.92);z-index:5;border-bottom:1px solid rgba(0,255,255,.15)}
+.home{color:#0ff;text-decoration:none;font-size:15px;border:1px solid rgba(0,255,255,.4);padding:6px 12px;border-radius:20px}
+h1{flex:1;text-align:center;font-size:17px;letter-spacing:2px;color:#ffd60a}
+.wrap{max-width:640px;margin:0 auto;padding:20px 18px 60px}
+h2{color:#0ff;font-size:16px;margin:22px 0 6px;letter-spacing:.5px}
+p,li{font-size:14px;color:#b9c6dd}
+ul{padding-left:20px}
+a{color:#f0f}
+.gold{color:#ffd60a}
+</style>
+</head>
+<body>
+<div class="top"><a class="home" href="index.html">🏠 HOME</a><h1>🔒 PRIVACY POLICY</h1><span style="width:58px"></span></div>
+<div class="wrap">
+<p><span class="gold">Galaxy AI Game Hub</span> (Owner: <span class="gold">Vishal Kumar Yadav</span>, India) • Last updated: 27 September 2026</p>
+
+<h2>1. Kya data store hota hai (aapke phone par)</h2>
+<p>Ye hub <span class="gold">localStorage</span> use karta hai - matlab aapka game data sirf aapke phone/browser me rehta hai, hamare server par nahi:</p>
+<ul>
+<li>Coins, high scores, achievements, badges, theme selection</li>
+<li>Profile naam aur photo (agar aap banate ho)</li>
+<li>Daily reward streak</li>
+</ul>
+<p>Browser ka data clear karne par ye sab delete ho jayega.</p>
+
+<h2>2. Google Sign-In (optional)</h2>
+<p>Agar aap Google se login karte ho (Firebase Authentication dwara), to hame sirf aapka naam, email aur profile photo dikhta hai - password kabhi nahi. Ye sirf aapka profile dikhane aur Owner Mode verify karne ke liye use hota hai. Aap kabhi bhi sign out kar sakte ho.</p>
+
+<h2>3. Ads (Google AdSense - aane wala)</h2>
+<p>Future me is website par Google AdSense ke ads dikh sakte hain. Us case me:</p>
+<ul>
+<li>Google aur uske partners cookies use karke ads dikhate hain (personalized ya non-personalized)</li>
+<li>Google ka ads data use: <a href="https://policies.google.com/technologies/ads">policies.google.com/technologies/ads</a></li>
+<li>Personalized ads band karne ke liye: <a href="https://adssettings.google.com">adssettings.google.com</a></li>
+</ul>
+
+<h2>4. Kya hum NAHI karte</h2>
+<ul>
+<li>Aapka data kisi ko bechte nahi</li>
+<li>Koi real-money game ya gambling nahi - sab games 100% free aur skill-based hain, rewards sirf in-game coins hain (inka koi cash value nahi)</li>
+<li>Location, contacts, camera - kuch access nahi lete</li>
+</ul>
+
+<h2>5. Bachche</h2>
+<p>Ye games sab ke liye hain. Hum bachchon ka personal data jaan boojh kar collect nahi karte.</p>
+
+<h2>6. Contact</h2>
+<p>Koi bhi sawaal: <a href="mailto:vishalkumaryadav.ec@gmail.com">vishalkumaryadav.ec@gmail.com</a></p>
+
+<h2>7. Changes</h2>
+<p>Policy update hogi to isi page par nayi date ke saath dikhegi.</p>
+</div>
+<h2>Analytics (usage ginti)</h2>
+<p>Hum Google Analytics for Firebase use karte hain taaki pata chale kitne log app kholte hain aur kaunse games sabse zyada khele jaate hain. Ye sirf ginti (counts) hai - naam, phone number ya koi personal cheez collect nahi hoti. Data Google ke servers par process hota hai aur sirf app ke owner ko dikhta hai.</p>
+</body>
+</html>
