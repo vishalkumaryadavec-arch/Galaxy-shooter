@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#050816">
+<title>Tic Tac Toe - Galaxy AI</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100%;background:#050816;font-family:Arial,sans-serif;color:#fff;touch-action:manipulation}
+body{background:radial-gradient(circle at 50% 25%,rgba(60,0,120,.45),rgba(5,8,22,.96) 70%);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+.top{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+a.home{background:rgba(255,255,255,.08);border:1px solid rgba(0,255,255,.4);color:#0ff;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:bold;text-decoration:none;text-shadow:0 0 6px #0ff}
+h1{font-size:26px;letter-spacing:2px;background:linear-gradient(90deg,#0ff,#f0f,#0ff);background-size:200%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 3s linear infinite}
+@keyframes shine{to{background-position:200%}}
+.diff{display:flex;gap:8px;margin:12px 0 4px}
+.diff button{padding:8px 18px;border-radius:20px;border:1px solid rgba(0,255,255,.4);background:transparent;color:#9ad;font-size:13px;font-weight:bold}
+.diff button.on{background:linear-gradient(90deg,#0ff,#f0f);color:#050816;border:none;box-shadow:0 0 14px #f0f}
+#status{margin:14px 0;font-size:19px;font-weight:bold;color:#0ff;text-shadow:0 0 10px #0ff;min-height:26px;text-align:center}
+#board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(88vw,340px)}
+.cell{aspect-ratio:1;background:rgba(255,255,255,.05);border:1px solid rgba(0,255,255,.3);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:bold;box-shadow:0 0 12px rgba(0,255,255,.1) inset;transition:transform .12s}
+.cell:active{transform:scale(.93)}
+.cell.x{color:#0ff;text-shadow:0 0 16px #0ff}
+.cell.o{color:#f0f;text-shadow:0 0 16px #f0f}
+.cell.win{background:rgba(255,255,0,.15);border-color:#ff0;box-shadow:0 0 20px rgba(255,255,0,.5)}
+#scores{display:flex;gap:22px;margin:20px 0 8px;font-size:14px;color:#9ad}
+#scores b{color:#ff0;text-shadow:0 0 6px #ff0}
+#again{margin-top:8px;padding:13px 40px;font-size:18px;font-weight:bold;letter-spacing:1px;border:none;border-radius:28px;background:linear-gradient(90deg,#0ff,#f0f);color:#050816;box-shadow:0 0 20px #f0f}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="top"><a class="home" href="index.html">🏠 HOME</a><h1>TIC TAC TOE</h1><span style="width:76px"></span></div>
+<div class="diff"><button id="d-easy">😊 EASY</button><button id="d-hard" class="on">🤖 PRO AI</button></div>
+<div id="status">Tumhari baari (❌)</div>
+<div id="board"></div>
+<div id="scores"><span>Jeet: <b id="sw">0</b></span><span>Draw: <b id="sd">0</b></span><span>Haar: <b id="sl">0</b></span></div>
+<button id="again" class="hide">🔄 PHIR SE</button>
+<script>
+const $=id=>document.getElementById(id);
+let board=Array(9).fill(''),over=false,hard=true;
+let wins=+localStorage.getItem('ttt_wins')||0,loss=+localStorage.getItem('ttt_losses')||0,draws=+localStorage.getItem('ttt_draws')||0;
+const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let AC;function beep(f,d,t='square',v=.05){if(localStorage.getItem('galaxy_muted')==='1')return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
+function showScores(){$('sw').textContent=wins;$('sd').textContent=draws;$('sl').textContent=loss}
+function build(){const b=$('board');b.innerHTML='';for(let i=0;i<9;i++){const c=document.createElement('div');c.className='cell';c.onclick=()=>move(i);b.appendChild(c)}}
+function paint(){document.querySelectorAll('.cell').forEach((c,i)=>{c.textContent=board[i]==='X'?'❌':board[i]==='O'?'⭕':'';c.classList.toggle('x',board[i]==='X');c.classList.toggle('o',board[i]==='O')})}
+function winner(b){for(const L of LINES){if(b[L[0]]&&b[L[0]]===b[L[1]]&&b[L[1]]===b[L[2]])return{p:b[L[0]],line:L}}return b.includes('')?null:{p:'D'}}
+function minimax(b,isMax,depth){
+  const w=winner(b);if(w){if(w.p==='O')return 10-depth;if(w.p==='X')return depth-10;return 0}
+  let best=isMax?-99:99;
+  for(let i=0;i<9;i++){if(!b[i]){b[i]=isMax?'O':'X';const s=minimax(b,!isMax,depth+1);b[i]='';best=isMax?Math.max(best,s):Math.min(best,s)}}
+  return best;
+}
+function aiMove(){
+  if(over)return;$('status').textContent='AI soch raha hai... 🤖';
+  setTimeout(()=>{
+    let pick;
+    const empty=board.map((v,i)=>v?null:i).filter(v=>v!==null);
+    if(!hard&&Math.random()<.7){pick=empty[Math.floor(Math.random()*empty.length)]}
+    else{let bs=-99;const opts=[];for(const i of empty){board[i]='O';const s=minimax(board.slice?board:board, false, 0);board[i]='';if(s>bs){bs=s;opts.length=0;opts.push(i)}else if(s===bs)opts.push(i)}pick=opts[Math.floor(Math.random()*opts.length)]}
+    board[pick]='O';beep(300,.1,'square',.05);paint();finish()||($('status').textContent='Tumhari baari (❌)');
+  },350);
+}
+function move(i){
+  if(over||board[i])return;
+  board[i]='X';beep(600,.08,'square',.05);paint();
+  if(!finish())aiMove();
+}
+function finish(){
+  const w=winner(board);
+  if(!w)return false;
+  over=true;
+  if(w.line)w.line.forEach(i=>document.querySelectorAll('.cell')[i].classList.add('win'));
+  if(w.p==='X'){$('status').textContent='🎉 Tum jeet gaye!';wins++;localStorage.setItem('ttt_wins',wins);beep(880,.15,'sine',.07);setTimeout(()=>beep(1320,.25,'sine',.07),150)}
+  else if(w.p==='O'){$('status').textContent='🤖 AI jeet gaya!';loss++;localStorage.setItem('ttt_losses',loss);beep(180,.3,'sawtooth',.07)}
+  else{$('status').textContent='😐 Draw ho gaya';draws++;localStorage.setItem('ttt_draws',draws);beep(440,.2,'triangle',.06)}
+  if(navigator.vibrate)navigator.vibrate(80);
+  showScores();$('again').classList.remove('hide');
+  return true;
+}
+function reset(){board=Array(9).fill('');over=false;$('status').textContent='Tumhari baari (❌)';$('again').classList.add('hide');build()}
+$('again').onclick=reset;
+$('d-easy').onclick=()=>{hard=false;$('d-easy').classList.add('on');$('d-hard').classList.remove('on');reset()};
+$('d-hard').onclick=()=>{hard=true;$('d-hard').classList.add('on');$('d-easy').classList.remove('on');reset()};
+build();showScores();
+// ===== GALAXY MUSIC + MUTE =====
+(function(){
+  const CFG={root:392.0,notes:[0, 4, 7, 12, 7, 4],wave:'square',tempo:160,ambient:true};
+  let played=false,gctx=null;
+  const gmuted=()=>localStorage.getItem('galaxy_muted')==='1';
+  function play(){
+    if(played)return;played=true;
+    if(gmuted())return;
+    try{
+      const a=new(window.AudioContext||window.webkitAudioContext)();if(a.state==='suspended')a.resume();gctx=a;
+      const master=a.createGain();master.gain.value=.95;master.connect(a.destination);
+      const t0=a.currentTime+.05;
+      [0,7,12].forEach(iv=>{
+        const f=CFG.root/2*Math.pow(2,iv/12);
+        const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f;
+        g.gain.setValueAtTime(.0001,t0);g.gain.linearRampToValueAtTime(.06,t0+1.1);g.gain.exponentialRampToValueAtTime(.0001,t0+3.4);
+        o.connect(g);g.connect(master);o.start(t0);o.stop(t0+3.5);
+      });
+      CFG.notes.forEach((n,i)=>{
+        const f=CFG.root*Math.pow(2,n/12),t=t0+.25+i*(60/CFG.tempo);
+        const o=a.createOscillator(),g=a.createGain();o.type=CFG.wave;o.frequency.value=f;
+        g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.13,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.36);
+        o.connect(g);g.connect(master);o.start(t);o.stop(t+.42);
+      });
+      const end=.25+CFG.notes.length*(60/CFG.tempo)+.3;
+      const s=a.createOscillator(),sg=a.createGain();s.type='triangle';s.frequency.value=CFG.root*4;
+      sg.gain.setValueAtTime(.0001,t0+end);sg.gain.linearRampToValueAtTime(.06,t0+end+.08);sg.gain.exponentialRampToValueAtTime(.0001,t0+end+1.5);
+      s.connect(sg);sg.connect(master);s.start(t0+end);s.stop(t0+end+1.6);
+      if(CFG.ambient){
+        const ts=t0+end+.5;
+        [0,7,12,16].forEach((iv,i)=>{
+          const f=CFG.root/2*Math.pow(2,iv/12);
+          const o=a.createOscillator(),g=a.createGain();o.type=i%2?'sine':'triangle';o.frequency.value=f;
+          g.gain.setValueAtTime(.0001,ts);g.gain.linearRampToValueAtTime(.024,ts+4);g.gain.setValueAtTime(.024,ts+15);g.gain.exponentialRampToValueAtTime(.0001,ts+24);
+          o.connect(g);g.connect(master);o.start(ts);o.stop(ts+25);
+        });
+      }
+    }catch(e){}
+  }
+  addEventListener('pointerdown',play,{once:true});
+  const mb=document.createElement('button');mb.id='gmute';mb.title='Sound on/off';
+  mb.setAttribute('style','position:fixed;right:10px;bottom:12px;z-index:90;width:42px;height:42px;border-radius:50%;background:rgba(5,8,22,.78);border:1px solid rgba(0,255,255,.45);font-size:19px;padding:0;box-shadow:0 0 10px rgba(0,255,255,.25);cursor:pointer');
+  function paint(){mb.textContent=gmuted()?'\u{1F507}':'\u{1F50A}'}
+  paint();
+  mb.addEventListener('click',e=>{e.stopPropagation();localStorage.setItem('galaxy_muted',gmuted()?'0':'1');paint();if(gctx){gmuted()?gctx.suspend():gctx.resume()}});
+  document.body.appendChild(mb);
+})();
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>

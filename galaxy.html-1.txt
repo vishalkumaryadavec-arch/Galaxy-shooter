@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#050816">
+<title>Galaxy AI Shooter</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#050816;font-family:Arial,sans-serif;color:#fff;touch-action:none}
+canvas{display:block}
+#ui{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:12px 16px;font-size:18px;font-weight:bold;pointer-events:none;text-shadow:0 0 6px #0ff}
+#home{position:fixed;bottom:14px;left:14px;z-index:5;pointer-events:auto;background:rgba(255,255,255,.08);border:1px solid rgba(0,255,255,.4);color:#0ff;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:bold;text-decoration:none;text-shadow:0 0 6px #0ff}
+#screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,rgba(60,0,120,.55),rgba(5,8,22,.94) 70%);text-align:center;padding:20px;overflow-y:auto}
+#logo{width:90px;height:90px;margin-bottom:10px;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 18px #0ff)}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+#screen h1{font-size:34px;letter-spacing:3px;background:linear-gradient(90deg,#0ff,#f0f,#0ff);background-size:200%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 3s linear infinite;margin-bottom:4px}
+@keyframes shine{to{background-position:200%}}
+#tag{color:#f8f;font-size:13px;letter-spacing:4px;margin-bottom:16px}
+#how{width:100%;max-width:340px;background:rgba(255,255,255,.06);border:1px solid rgba(0,255,255,.3);border-radius:16px;padding:12px 14px;text-align:left;margin-bottom:6px}
+#how h3{color:#0ff;font-size:15px;margin-bottom:8px;text-align:center}
+#how div{font-size:14px;color:#dde;margin:6px 0;display:flex;gap:10px;align-items:center}
+#how b{font-size:18px;width:24px;text-align:center}
+#screen p{color:#aac;margin:6px 0;font-size:15px}
+#best{color:#ff0!important;font-weight:bold;text-shadow:0 0 8px #ff0}
+#screen button{margin-top:14px;padding:15px 54px;font-size:22px;font-weight:bold;letter-spacing:2px;border:none;border-radius:30px;background:linear-gradient(90deg,#0ff,#f0f);color:#050816;box-shadow:0 0 25px #f0f;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07);box-shadow:0 0 40px #0ff}}
+#splash{position:fixed;inset:0;z-index:9;background:#050816;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s}
+#splash .t{font-size:26px;font-weight:bold;color:#0ff;text-shadow:0 0 20px #0ff;letter-spacing:3px;margin:14px 0}
+#bar{width:200px;height:6px;background:#222;border-radius:3px;overflow:hidden}
+#bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#0ff,#f0f);animation:load 1.8s ease-out forwards}
+@keyframes load{to{width:100%}}
+#splash small{color:#88a;margin-top:10px;font-size:12px}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<a id="home" href="index.html">🏠 HOME</a>
+<div id="ui"><span id="score">Score 0</span><span id="lvl">Level 1</span><span id="hp">❤️❤️❤️</span></div>
+<div id="splash"><svg id="logo" viewBox="0 0 100 100"><polygon points="50,8 88,88 50,70 12,88" fill="#0ff"/><polygon points="50,70 42,92 58,92" fill="#f0f"/></svg><div class="t">GALAXY AI</div><div id="bar"><i></i></div><small>AI brain load ho raha hai...</small></div>
+<div id="screen">
+  <svg style="width:80px;height:80px;margin-bottom:8px;filter:drop-shadow(0 0 18px #0ff);animation:float 3s ease-in-out infinite" id="logo2" viewBox="0 0 100 100"><polygon points="50,8 88,88 50,70 12,88" fill="#0ff"/><polygon points="50,70 42,92 58,92" fill="#f0f"/></svg>
+  <h1>GALAXY AI</h1>
+  <div id="tag">SHOOTER • AI ENEMIES</div>
+  <div id="how"><h3>🎮 Kaise khelna hai</h3>
+    <div><b>👆</b>Ungli se ship ko ghumao, goli apne aap chalegi</div>
+    <div><b>🧠</b>Dushman AI hain, tumhari chaal seekhte hain</div>
+    <div><b>⚡</b>Power, 🛡️ shield, ❤️ life utha lo</div>
+    <div><b>👾</b>Har 3rd level pe BOSS aata hai</div>
+  </div>
+  <p id="best"></p>
+  <button id="play">▶ PLAY</button>
+  <p style="margin-top:14px"><a href="index.html" style="color:#0ff;text-decoration:none;font-size:15px">🏠 Game Hub pe wapas</a></p>
+</div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+let W,H;function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}resize();addEventListener('resize',resize);
+const $=id=>document.getElementById(id);
+let best=+localStorage.getItem('gas_best')||0;$('best').textContent='High Score: '+best;
+
+// ---------- audio ----------
+let AC;function beep(f,d,t='square',v=.05){if(localStorage.getItem('galaxy_muted')==='1')return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
+
+// ---------- state ----------
+let player,bullets=[],eBullets=[],enemies=[],particles=[],powerups=[],score=0,level=1,running=false,shake=0,fireT=0,spawnQ=[],boss=null;
+let stars=Array.from({length:120},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,s:Math.random()*2+.3}));
+// AI brain: learns where player likes to stay & how they dodge
+const brain={heat:new Array(10).fill(1),dodge:0,samples:0,
+  learn(x,vx){const i=Math.min(9,Math.max(0,Math.floor(x/W*10)));this.heat[i]+=1;this.dodge=this.dodge*.99+Math.abs(vx)*.01;this.samples++;
+    if(this.samples%300===0)this.heat=this.heat.map(h=>h*.7+.3)},
+  favX(){let m=0,b=0;this.heat.forEach((h,i)=>{if(h>m){m=h;b=i}});return(b+.5)/10*W}};
+
+function reset(){
+  player={x:W/2,y:H-110,tx:W/2,ty:H-110,r:18,hp:3,inv:0,power:1,shield:0,vx:0};
+  bullets=[];eBullets=[];enemies=[];particles=[];powerups=[];score=0;level=1;shake=0;fireT=0;boss=null;
+  stars=Array.from({length:120},()=>({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+.3}));
+  startLevel();
+}
+function startLevel(){
+  spawnQ=[];const n=6+level*3;
+  for(let i=0;i<n;i++){const r=Math.random();const type=level<2?'chaser':r<.35?'chaser':r<.6?'dodger':r<.85?'sniper':'swarm';spawnQ.push({t:i*50,type})}
+  if(level%3===0)spawnQ.push({t:n*50+120,type:'boss'});
+  showMsg('LEVEL '+level);
+}
+let msg='',msgT=0;function showMsg(m){msg=m;msgT=120}
+
+// ---------- enemies with AI behaviours ----------
+function spawn(type){
+  const diff=1+level*.15;
+  const base={x:Math.random()*(W-60)+30,y:-30,vx:0,vy:0,type,t:0,cd:60+Math.random()*60};
+  if(type==='chaser')Object.assign(base,{r:16,hp:2,speed:1.6*diff,col:'#f44',pts:10});
+  if(type==='dodger')Object.assign(base,{r:15,hp:2,speed:2*diff,col:'#fa0',pts:15});
+  if(type==='sniper')Object.assign(base,{r:17,hp:3,speed:1.2*diff,col:'#a4f',pts:20});
+  if(type==='swarm'){for(let k=0;k<5;k++)enemies.push({x:W/2+(k-2)*40,y:-30-k*20,vx:0,vy:0,type:'swarmling',t:k*10,r:10,hp:1,speed:2.4*diff,col:'#4f8',pts:8,cd:999,idx:k});return}
+  if(type==='boss'){boss={x:W/2,y:-80,vx:2,vy:0,type:'boss',t:0,r:48,hp:40+level*10,max:40+level*10,col:'#f0f',pts:300,cd:40,phase:0};enemies.push(boss);showMsg('⚠ AI BOSS ⚠');beep(80,.6,'sawtooth',.08);return}
+  enemies.push(base);
+}
+function steer(e,tx,ty,sp){const dx=tx-e.x,dy=ty-e.y,d=Math.hypot(dx,dy)||1;e.vx+=(dx/d*sp-e.vx)*.06;e.vy+=(dy/d*sp-e.vy)*.06}
+function aiUpdate(e){
+  e.t++;
+  // predictive target: where player WILL be
+  const lead=20+brain.dodge*8;const px=player.x+player.vx*lead,py=player.y;
+  if(e.type==='chaser'){ if(e.y<H*.35)steer(e,px,H*.4,e.speed);else steer(e,px,py,e.speed) }
+  else if(e.type==='dodger'){
+    let fx=0;for(const b of bullets){const dx=e.x-b.x,dy=e.y-b.y;if(dy>0&&dy<160&&Math.abs(dx)<50)fx+=(dx>=0?1:-1)*(1-dy/160)*4}
+    steer(e,px+Math.sin(e.t*.05)*80,H*.3+Math.sin(e.t*.03)*60,e.speed);e.vx+=fx;
+  }
+  else if(e.type==='sniper'){
+    steer(e,brain.favX()+Math.sin(e.t*.02)*60,H*.18,e.speed);
+    if(--e.cd<=0){aimShot(e,lead,3.2+level*.2);e.cd=Math.max(35,110-level*6)}
+  }
+  else if(e.type==='swarmling'){
+    const ang=e.t*.04+e.idx*1.25;const cx=px,cy=Math.min(py-140,H*.45);
+    steer(e,cx+Math.cos(ang)*90,cy+Math.sin(ang)*50,e.speed);
+    if(e.t>240)steer(e,px,py,e.speed*1.5);
+  }
+  else if(e.type==='boss'){
+    if(e.y<110)e.vy=1.5;else{e.vy=0;
+      const tx=brain.favX();e.vx+=((tx-e.x)*.004-e.vx)*.05;
+      e.phase=e.hp<e.max*.5?1:0;
+      if(--e.cd<=0){
+        if(e.phase===0){for(let a=-2;a<=2;a++)eBullets.push({x:e.x,y:e.y+40,vx:a*1.2,vy:4,r:6})}
+        else{for(let a=0;a<14;a++){const an=a/14*Math.PI*2+e.t*.05;eBullets.push({x:e.x,y:e.y,vx:Math.cos(an)*3.2,vy:Math.sin(an)*3.2,r:5})}aimShot(e,lead,5)}
+        e.cd=e.phase?45:60;beep(160,.15,'sawtooth')}
+      if(e.t%400===0)spawnQ.push({t:0,type:'chaser'},{t:20,type:'dodger'});
+    }
+  }
+  if(e.type!=='boss'&&e.type!=='sniper'&&--e.cd<=0&&level>1){aimShot(e,lead,2.6+level*.15);e.cd=120+Math.random()*100}
+  e.x+=e.vx;e.y+=e.vy;e.x=Math.max(e.r,Math.min(W-e.r,e.x));
+}
+function aimShot(e,lead,sp){const tx=player.x+player.vx*lead,ty=player.y,dx=tx-e.x,dy=ty-e.y,d=Math.hypot(dx,dy)||1;eBullets.push({x:e.x,y:e.y,vx:dx/d*sp,vy:dy/d*sp,r:5})}
+
+// ---------- effects ----------
+function boom(x,y,col,n=18){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=Math.random()*4+1;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:30+Math.random()*20,col})}}
+
+// ---------- input ----------
+let touching=false,offX=0,offY=0;
+function tp(e){const t=e.touches?e.touches[0]:e;return{x:t.clientX,y:t.clientY}}
+cv.addEventListener('touchstart',e=>{const p=tp(e);touching=true;offX=player.x-p.x;offY=player.y-p.y;e.preventDefault()},{passive:false});
+cv.addEventListener('touchmove',e=>{if(!touching)return;const p=tp(e);player.tx=p.x+offX;player.ty=p.y+offY;e.preventDefault()},{passive:false});
+cv.addEventListener('touchend',()=>touching=false);
+cv.addEventListener('mousemove',e=>{player.tx=e.clientX;player.ty=e.clientY});
+
+// ---------- loop ----------
+function update(){
+  for(const s of stars){s.y+=s.s*(1+level*.1);if(s.y>H){s.y=0;s.x=Math.random()*W}}
+  if(!running)return;
+  const ox=player.x;player.tx=Math.max(20,Math.min(W-20,player.tx));player.ty=Math.max(H*.4,Math.min(H-40,player.ty));
+  player.x+=(player.tx-player.x)*.35;player.y+=(player.ty-player.y)*.35;player.vx=player.x-ox;brain.learn(player.x,player.vx);
+  if(player.inv>0)player.inv--;if(player.shield>0)player.shield--;
+  if(++fireT>=9){fireT=0;const p=player.power;
+    bullets.push({x:player.x,y:player.y-20,vx:0,vy:-11});
+    if(p>=2){bullets.push({x:player.x-12,y:player.y-10,vx:-1.2,vy:-10},{x:player.x+12,y:player.y-10,vx:1.2,vy:-10})}
+    if(p>=3){bullets.push({x:player.x-20,y:player.y,vx:-2.5,vy:-9},{x:player.x+20,y:player.y,vx:2.5,vy:-9})}
+    beep(880,.04,'square',.015)}
+  bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy});bullets=bullets.filter(b=>b.y>-20&&b.x>-20&&b.x<W+20);
+  eBullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy});eBullets=eBullets.filter(b=>b.y<H+20&&b.y>-40&&b.x>-20&&b.x<W+20);
+  spawnQ.forEach(s=>s.t--);spawnQ.filter(s=>s.t<=0).forEach(s=>spawn(s.type));spawnQ=spawnQ.filter(s=>s.t>0);
+  enemies.forEach(aiUpdate);
+  // collisions
+  for(const e of enemies){for(const b of bullets){if(!b.dead&&Math.hypot(e.x-b.x,e.y-b.y)<e.r+4){b.dead=1;e.hp--;boom(b.x,b.y,e.col,3);if(e.hp<=0&&!e.dead){e.dead=1;score+=e.pts*level;boom(e.x,e.y,e.col,e.type==='boss'?80:20);shake=e.type==='boss'?25:6;beep(e.type==='boss'?60:200,.25,'triangle',.06);
+      if(Math.random()<(e.type==='boss'?1:.12))powerups.push({x:e.x,y:e.y,k:['power','shield','heal'][Math.floor(Math.random()*3)]});if(e.type==='boss')boss=null}}}
+    if(!e.dead&&Math.hypot(e.x-player.x,e.y-player.y)<e.r+player.r-4){if(e.type!=='boss'){e.dead=1;boom(e.x,e.y,e.col)}hit()}
+    if(e.y>H+60)e.dead=1}
+  bullets=bullets.filter(b=>!b.dead);enemies=enemies.filter(e=>!e.dead);
+  for(const b of eBullets){if(Math.hypot(b.x-player.x,b.y-player.y)<b.r+player.r-6){b.dead=1;hit()}}eBullets=eBullets.filter(b=>!b.dead);
+  powerups.forEach(p=>{p.y+=2;if(Math.hypot(p.x-player.x,p.y-player.y)<30){p.dead=1;beep(1200,.2,'sine',.06);
+    if(p.k==='power')player.power=Math.min(3,player.power+1);if(p.k==='shield')player.shield=420;if(p.k==='heal')player.hp=Math.min(5,player.hp+1);showMsg(p.k==='power'?'POWER UP!':p.k==='shield'?'SHIELD!':'+1 LIFE')}});
+  powerups=powerups.filter(p=>!p.dead&&p.y<H+20);
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vx*=.96;p.vy*=.96;p.l--});particles=particles.filter(p=>p.l>0);
+  if(spawnQ.length===0&&enemies.length===0){level++;player.power=Math.max(1,player.power);startLevel()}
+  if(shake>0)shake*=.9;if(msgT>0)msgT--;
+  $('score').textContent='Score '+score;$('lvl').textContent='Level '+level;$('hp').textContent='❤️'.repeat(Math.max(0,player.hp));
+}
+function hit(){if(player.inv>0)return;if(player.shield>0){player.shield=0;player.inv=60;boom(player.x,player.y,'#0ff',25);return}
+  player.hp--;player.inv=90;player.power=Math.max(1,player.power-1);shake=14;boom(player.x,player.y,'#0ff',30);beep(100,.4,'sawtooth',.08);
+  if(navigator.vibrate)navigator.vibrate(120);if(player.hp<=0)gameOver()}
+function gameOver(){running=false;if(score>best){best=score;localStorage.setItem('gas_best',best)}
+  $('screen').classList.remove('hide');$('screen').querySelector('h1').textContent='GAME OVER';
+  $('how').classList.add('hide');$('best').innerHTML='Score: '+score+'<br>High Score: '+best+'<br>Level: '+level;$('play').textContent='PLAY AGAIN'}
+
+function ship(x,y,col,r){ctx.save();ctx.translate(x,y);ctx.shadowBlur=18;ctx.shadowColor=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r*.8,r*.8);ctx.lineTo(0,r*.4);ctx.lineTo(-r*.8,r*.8);ctx.closePath();ctx.fill();ctx.restore()}
+function enemyShape(e){ctx.save();ctx.translate(e.x,e.y);ctx.shadowBlur=16;ctx.shadowColor=e.col;ctx.fillStyle=e.col;
+  if(e.type==='boss'){ctx.beginPath();for(let i=0;i<8;i++){const a=i/8*6.28+e.t*.02,rr=i%2?e.r*.6:e.r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}ctx.fill();
+    ctx.restore();ctx.fillStyle='#333';ctx.fillRect(W*.15,50,W*.7,8);ctx.fillStyle='#f0f';ctx.fillRect(W*.15,50,W*.7*e.hp/e.max,8);return}
+  ctx.rotate(Math.PI);ctx.beginPath();ctx.moveTo(0,-e.r);ctx.lineTo(e.r,e.r*.6);ctx.lineTo(-e.r,e.r*.6);ctx.closePath();ctx.fill();ctx.restore()}
+function draw(){
+  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#050816';ctx.fillRect(0,0,W,H);
+  if(shake>.5)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+  ctx.fillStyle='#fff';stars.forEach(s=>{ctx.globalAlpha=s.s/2.3;ctx.fillRect(s.x,s.y,s.s,s.s*2)});ctx.globalAlpha=1;
+  if(!running)return;
+  ctx.fillStyle='#0ff';bullets.forEach(b=>ctx.fillRect(b.x-2,b.y-8,4,14));
+  ctx.fillStyle='#f55';eBullets.forEach(b=>{ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,6.28);ctx.fill()});
+  enemies.forEach(enemyShape);
+  powerups.forEach(p=>{ctx.font='24px Arial';ctx.textAlign='center';ctx.fillText(p.k==='power'?'⚡':p.k==='shield'?'🛡️':'❤️',p.x,p.y+8)});
+  particles.forEach(p=>{ctx.globalAlpha=p.l/50;ctx.fillStyle=p.col;ctx.fillRect(p.x,p.y,3,3)});ctx.globalAlpha=1;
+  if(!(player.inv>0&&Math.floor(player.inv/5)%2))ship(player.x,player.y,'#0ff',player.r);
+  if(player.shield>0){ctx.strokeStyle='rgba(0,255,255,.6)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(player.x,player.y,30,0,6.28);ctx.stroke()}
+  if(msgT>0){ctx.globalAlpha=Math.min(1,msgT/30);ctx.font='bold 34px Arial';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.shadowBlur=20;ctx.shadowColor='#f0f';ctx.fillText(msg,W/2,H/2);ctx.shadowBlur=0;ctx.globalAlpha=1}
+}
+function loop(){try{update();draw()}catch(e){console.error(e)}requestAnimationFrame(loop)}
+$('play').onclick=()=>{$('screen').classList.add('hide');reset();running=true;beep(440,.2,'sine',.05)};
+loop();
+setTimeout(()=>{const sp=$('splash');sp.style.opacity=0;setTimeout(()=>sp.remove(),600)},2000);
+// ===== GALAXY MUSIC + MUTE =====
+(function(){
+  const CFG={root:164.81,notes:[0, 3, 7, 12, 15, 12, 7, 3],wave:'sawtooth',tempo:150,ambient:true};
+  let played=false,gctx=null;
+  const gmuted=()=>localStorage.getItem('galaxy_muted')==='1';
+  function play(){
+    if(played)return;played=true;
+    if(gmuted())return;
+    try{
+      const a=new(window.AudioContext||window.webkitAudioContext)();if(a.state==='suspended')a.resume();gctx=a;
+      const master=a.createGain();master.gain.value=.95;master.connect(a.destination);
+      const t0=a.currentTime+.05;
+      [0,7,12].forEach(iv=>{
+        const f=CFG.root/2*Math.pow(2,iv/12);
+        const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f;
+        g.gain.setValueAtTime(.0001,t0);g.gain.linearRampToValueAtTime(.06,t0+1.1);g.gain.exponentialRampToValueAtTime(.0001,t0+3.4);
+        o.connect(g);g.connect(master);o.start(t0);o.stop(t0+3.5);
+      });
+      CFG.notes.forEach((n,i)=>{
+        const f=CFG.root*Math.pow(2,n/12),t=t0+.25+i*(60/CFG.tempo);
+        const o=a.createOscillator(),g=a.createGain();o.type=CFG.wave;o.frequency.value=f;
+        g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.13,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.36);
+        o.connect(g);g.connect(master);o.start(t);o.stop(t+.42);
+      });
+      const end=.25+CFG.notes.length*(60/CFG.tempo)+.3;
+      const s=a.createOscillator(),sg=a.createGain();s.type='triangle';s.frequency.value=CFG.root*4;
+      sg.gain.setValueAtTime(.0001,t0+end);sg.gain.linearRampToValueAtTime(.06,t0+end+.08);sg.gain.exponentialRampToValueAtTime(.0001,t0+end+1.5);
+      s.connect(sg);sg.connect(master);s.start(t0+end);s.stop(t0+end+1.6);
+      if(CFG.ambient){
+        const ts=t0+end+.5;
+        [0,7,12,16].forEach((iv,i)=>{
+          const f=CFG.root/2*Math.pow(2,iv/12);
+          const o=a.createOscillator(),g=a.createGain();o.type=i%2?'sine':'triangle';o.frequency.value=f;
+          g.gain.setValueAtTime(.0001,ts);g.gain.linearRampToValueAtTime(.024,ts+4);g.gain.setValueAtTime(.024,ts+15);g.gain.exponentialRampToValueAtTime(.0001,ts+24);
+          o.connect(g);g.connect(master);o.start(ts);o.stop(ts+25);
+        });
+      }
+    }catch(e){}
+  }
+  addEventListener('pointerdown',play,{once:true});
+  const mb=document.createElement('button');mb.id='gmute';mb.title='Sound on/off';
+  mb.setAttribute('style','position:fixed;right:10px;bottom:12px;z-index:90;width:42px;height:42px;border-radius:50%;background:rgba(5,8,22,.78);border:1px solid rgba(0,255,255,.45);font-size:19px;padding:0;box-shadow:0 0 10px rgba(0,255,255,.25);cursor:pointer');
+  function paint(){mb.textContent=gmuted()?'\u{1F507}':'\u{1F50A}'}
+  paint();
+  mb.addEventListener('click',e=>{e.stopPropagation();localStorage.setItem('galaxy_muted',gmuted()?'0':'1');paint();if(gctx){gmuted()?gctx.suspend():gctx.resume()}});
+  document.body.appendChild(mb);
+})();
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
