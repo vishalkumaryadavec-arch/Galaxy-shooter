@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#050b12">
+<title>Galaxy Cricket 3D</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b12;font-family:Arial,sans-serif;color:#fff}
+#app{position:fixed;inset:0;background:#050b12}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hud{position:absolute;inset:0;pointer-events:none}
+.top{display:flex;justify-content:space-between;align-items:flex-start;padding:10px;gap:8px}
+.score{background:linear-gradient(135deg,#071a2b,#103653);border:1px solid #6798b5;border-radius:14px;padding:8px 12px;box-shadow:0 8px 25px #0008;min-width:255px}
+.team{font-size:11px;color:#70c8ff;letter-spacing:1px}.big{font-size:30px;font-weight:900}.big small{font-size:14px;color:#b7c8d2}.sub{font-size:10px;color:#b8c9d3}
+.badges{display:flex;gap:6px}.badge{background:#071522dd;border:1px solid #385e74;border-radius:9px;padding:7px;font-size:10px}
+.center{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#071522cc;border:1px solid #385e74;border-radius:9px;padding:6px 10px;font-size:11px}
+.help{position:absolute;top:78px;left:50%;transform:translateX(-50%);background:#071522aa;border-radius:7px;padding:5px 8px;font-size:10px;color:#b7c8d2}
+.toast{position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);font-size:28px;font-weight:900;text-shadow:0 4px 12px #000;opacity:0;transition:.15s;text-align:center}
+.toast.on{opacity:1}
+.bottom{position:absolute;left:0;right:0;bottom:8px;padding:8px;display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.controls{width:min(600px,100%);display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+button{pointer-events:auto;border:1px solid #5b8299;border-radius:10px;background:linear-gradient(#124261,#09283e);color:#fff;padding:11px 4px;font-weight:900;font-size:11px;box-shadow:0 4px 12px #0008}
+button:active{transform:scale(.96)}button.gold{background:linear-gradient(#8b6115,#4c3108);border-color:#f1bf45}
+.status{width:245px;background:#071522ed;border:1px solid #41657b;border-radius:13px;padding:9px;font-size:11px}
+.status b{color:#ffd34d}.meter{height:8px;background:#172a35;border-radius:8px;overflow:hidden;margin-top:6px}.bar{height:100%;width:0;background:linear-gradient(90deg,#df4038,#ffd24c,#38cf75,#ffd24c,#df4038)}
+@media(max-width:700px){
+ .badges,.center{display:none}.score{min-width:190px}.big{font-size:25px}.help{top:68px}
+ .bottom{display:block}.controls{width:calc(100% - 165px);max-width:470px}.status{position:absolute;right:8px;bottom:0;width:160px}
+ .controls{grid-template-columns:repeat(3,1fr)}button{padding:10px 3px;font-size:10px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<canvas id="scene"></canvas>
+<div class="hud">
+<div class="top">
+ <div class="score">
+  <div class="team">🇮🇳 INDIA • T20 MATCH</div>
+  <div class="big"><span id="r">0</span>/<span id="w">0</span> <small>(<span id="o">0.0</span>)</small></div>
+  <div class="sub">TARGET <span id="target">121</span> • RR <span id="rr">0.00</span> • THIS OVER <span id="tor">0</span></div>
+ </div>
+ <div class="badges"><div class="badge">🏟 NIGHT</div><div class="badge">🎥 BROADCAST</div><div class="badge">⚡ 3D ENGINE</div></div>
+</div>
+<div class="center">INDIA vs GALAXY XI • <span id="delivery">READY</span></div>
+<div class="help">1 Defence • 2 Drive • 3 Pull • 4 Cut • 5 Loft • SPACE Drive • N Next Ball</div>
+<div id="toast" class="toast"></div>
+<div class="bottom">
+ <div class="controls">
+  <button onclick="shot('defence')">DEFENCE</button><button onclick="shot('drive')">DRIVE</button><button onclick="shot('pull')">PULL</button>
+  <button onclick="shot('cut')">CUT</button><button class="gold" onclick="shot('loft')">LOFT</button>
+  <button onclick="bowl('FAST')">FAST BOWL</button><button onclick="bowl('SWING')">SWING</button><button onclick="bowl('SPIN')">SPIN</button>
+  <button onclick="nextBall()">NEXT BALL</button><button onclick="newMatch()">NEW MATCH</button>
+ </div>
+ <div class="status"><b id="msg">Ready for the next delivery.</b><div class="meter"><div id="bar" class="bar"></div></div>
+ <div style="margin-top:5px">Timing: <span id="timing">WAIT</span> • Bowler: <span id="bowl">FAST</span></div></div>
+</div>
+</div>
+</div>
+<script>
+const cv=document.getElementById('scene'),ctx=cv.getContext('2d');
+let W=0,H=0,dpr=1,phase='ready',t=0,rt=0,shotName='',bowler='FAST';
+let runs=0,wk=0,balls=0,overRuns=0,target=121;
+const $=x=>document.getElementById(x);
+
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',resize);resize();
+
+function hud(){
+ $('r').textContent=runs;$('w').textContent=wk;$('o').textContent=Math.floor(balls/6)+'.'+balls%6;
+ $('rr').textContent=balls?(runs/(balls/6)).toFixed(2):'0.00';$('tor').textContent=overRuns;$('bowl').textContent=bowler;
+}
+function msg(x){$('msg').textContent=x}
+function toast(x){$('toast').textContent=x;$('toast').classList.add('on');setTimeout(()=>$('toast').classList.remove('on'),900)}
+function newMatch(){runs=0;wk=0;balls=0;overRuns=0;phase='ready';t=0;rt=0;hud();msg('Ready for the next delivery.');$('delivery').textContent='READY'}
+function bowl(x){bowler=x;$('bowl').textContent=x;msg(x+' bowling selected.');if(phase!=='delivery')nextBall()}
+function nextBall(){if(phase==='delivery')return;if(balls>=120){msg('Innings complete.');return}phase='delivery';t=0;shotName='';$('delivery').textContent='DELIVERY';msg('Watch the ball — choose your shot at the right time.');$('timing').textContent='WAIT';$('bar').style.width='0%'}
+function shot(s){
+ if(phase!=='delivery'){msg('Tap NEXT BALL first.');return}
+ shotName=s;phase='result';rt=0;
+ let d=Math.abs(t-.76),r=0,q='';
+ if(d<.055){q='PERFECT';r=s==='pull'||s==='loft'?6:s==='defence'?1:4}
+ else if(d<.14){q='GOOD';r=s==='defence'?0:2}
+ else{q='MISS';if(Math.random()<.17){wk++;r=0}else r=1}
+ runs+=r;overRuns+=r;balls++;
+ if(r===6){toast('SIX! 🚀');msg(q+' TIMING • SIX!')}
+ else if(r===4){toast('FOUR! 🏏');msg(q+' TIMING • FOUR!')}
+ else if(q==='MISS'&&r===0){toast('WICKET!');msg('WICKET — mistimed shot.')}
+ else msg(q+' TIMING • '+r+' run'+(r===1?'':'s')+'.');
+ $('timing').textContent=q;hud();
+ if(balls%6===0)setTimeout(()=>{overRuns=0;msg('OVER COMPLETE • NEXT BALL for new over.')},500);
+}
+
+function poly(points,fill,stroke){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.stroke()}}
+function line(a,b,stroke,w=1){ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.stroke()}
+function stadium(){
+ let sky=ctx.createLinearGradient(0,0,0,H*.48);sky.addColorStop(0,'#020a16');sky.addColorStop(.55,'#0b2a42');sky.addColorStop(1,'#1b5661');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ // floodlights
+ for(let x of [W*.09,W*.91]){ctx.fillStyle='#5d6971';ctx.fillRect(x-3,H*.13,6,H*.34);ctx.fillStyle='#eaf4ff';ctx.shadowBlur=25;ctx.shadowColor='#dff3ff';ctx.fillRect(x-35,H*.12,70,16);ctx.shadowBlur=0}
+ // crowd tiers
+ for(let j=0;j<6;j++){ctx.fillStyle=j%2?'#112d3d':'#0b2332';ctx.beginPath();ctx.ellipse(W/2,H*.31+j*20,W*.43-j*18,90-j*5,0,0,Math.PI*2);ctx.fill()}
+ // field
+ ctx.fillStyle='#176c38';ctx.beginPath();ctx.ellipse(W/2,H*.79,W*.58,H*.39,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#52a967';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(W/2,H*.79,W*.57,H*.38,0,0,Math.PI*2);ctx.stroke();
+}
+function pitch(){
+ const cx=W/2,top=H*.42,bottom=H*.93,tw=W*.12,bw=W*.36;
+ poly([[cx-tw,top],[cx+tw,top],[cx+bw,bottom],[cx-bw,bottom]],'#b99a69');
+ ctx.strokeStyle='#e7e7e7';ctx.lineWidth=2;
+ line([cx-tw,top+12],[cx+tw,top+12],'#fff',2);line([cx-bw*.78,bottom-15],[cx+bw*.78,bottom-15],'#fff',2);
+ // pitch mowing lines
+ for(let i=0;i<10;i++){let y=top+(bottom-top)*i/10;line([cx-tw-(bw-tw)*(i/10),y],[cx+tw+(bw-tw)*(i/10),y],'#c8aa78',1)}
+ // stumps
+ for(let side of [-1,1]){let y=side<0?top+5:bottom-7;for(let j=-1;j<=1;j++){ctx.fillStyle='#f0c35d';ctx.fillRect(cx+j*5-2,y-20,4,20)}}
+}
+function person(x,y,scale,shirt,bat=false,flip=false){
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+ ctx.fillStyle='#111820';ctx.fillRect(-11,40,8,30);ctx.fillRect(3,40,8,30);
+ ctx.fillStyle='#e8e8e8';ctx.fillRect(-15,68,11,6);ctx.fillRect(3,68,11,6);
+ ctx.fillStyle=shirt;ctx.beginPath();ctx.roundRect(-22,-5,44,52,8);ctx.fill();
+ ctx.fillStyle='#c98d69';ctx.beginPath();ctx.arc(0,-24,18,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#101820';ctx.beginPath();ctx.arc(0,-29,19,Math.PI,Math.PI*2);ctx.fill();
+ ctx.strokeStyle=shirt;ctx.lineWidth=11;ctx.lineCap='round';
+ ctx.beginPath();ctx.moveTo(-15,5);ctx.lineTo(-35,31);ctx.moveTo(15,5);ctx.lineTo(35,25);ctx.stroke();
+ if(bat){ctx.strokeStyle='#d5a15e';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(27,20);ctx.lineTo(43,-36);ctx.stroke();ctx.strokeStyle='#624026';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(43,-36);ctx.lineTo(47,-50);ctx.stroke()}
+ ctx.restore();
+}
+function drawBall(x,y,r){ctx.fillStyle='#b91420';ctx.shadowBlur=8;ctx.shadowColor='#ff3a3a';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,r*.72,-.7,.7);ctx.stroke()}
+function frame(){
+ let dt=.016;
+ stadium();pitch();
+ const cx=W/2, top=H*.42,bottom=H*.93;
+ // perspective players
+ person(cx,bottom-55,1.15,'#1766bd',true);
+ person(cx,top+5,.78,'#bd3038',false);
+ person(cx,top+65,.58,'#183e6a',false);
+ let bx=cx,by=top+30;
+ if(phase==='delivery'){
+   t=Math.min(1,t+dt*(bowler==='FAST'?1.35:bowler==='SWING'?1.12:.92));
+   let p=t,z=top+35+(bottom-top-95)*p;bx=cx+Math.sin(p*10)*14;by=z;
+   $('bar').style.width=(t*100)+'%';
+   if(t>=1)shot('defence');
+ }else if(phase==='result'){
+   rt+=dt;let p=Math.min(rt,1.2);let dir=shotName==='cut'?1.25:shotName==='pull'?1.0:.35;
+   bx=cx+dir*W*.28*p;by=bottom-100-p*H*.32+Math.sin(p*Math.PI)*-H*.22;
+   if(rt>1.25){phase='ready';$('delivery').textContent='READY'}
+ }else{
+   by=bottom-92;bx=cx+Math.sin(Date.now()/500)*3;
+ }
+ drawBall(bx,by,Math.max(5,9-(by/H)*2));
+ // boundary boards
+ ctx.font='bold 13px Arial';ctx.fillStyle='#dbe9ef';ctx.textAlign='center';ctx.fillText('GALAXY CRICKET • LIVE',W/2,H*.285);
+ requestAnimationFrame(frame);
+}
+hud();frame();
+</script>
+</body>
+</html>
