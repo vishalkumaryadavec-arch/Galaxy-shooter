@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050816">
+<title>About - Galaxy AI Game Hub</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050816;color:#dce6f5;font-family:Arial,sans-serif;line-height:1.75;min-height:100vh}
+.top{position:sticky;top:0;display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(5,8,22,.92);z-index:5;border-bottom:1px solid rgba(0,255,255,.15)}
+.home{color:#0ff;text-decoration:none;font-size:15px;border:1px solid rgba(0,255,255,.4);padding:6px 12px;border-radius:20px}
+h1{flex:1;text-align:center;font-size:17px;letter-spacing:2px;color:#ffd60a}
+.wrap{max-width:640px;margin:0 auto;padding:20px 18px 60px;text-align:center}
+.hero{font-size:56px;filter:drop-shadow(0 0 22px #0ff)}
+h2{color:#0ff;font-size:19px;margin:16px 0 6px;letter-spacing:1px}
+p{font-size:14px;color:#b9c6dd}
+a{color:#f0f}
+.gold{color:#ffd60a}
+.stats{display:flex;gap:10px;justify-content:center;margin:18px 0;flex-wrap:wrap}
+.stat{border:1px solid rgba(0,255,255,.25);border-radius:14px;padding:10px 16px;background:rgba(255,255,255,.04)}
+.stat b{display:block;font-size:20px;color:#ffd60a}
+</style>
+</head>
+<body>
+<div class="top"><a class="home" href="index.html">🏠 HOME</a><h1>✨ ABOUT</h1><span style="width:58px"></span></div>
+<div class="wrap">
+<div class="hero">🌌</div>
+<h2>GALAXY AI GAME HUB</h2>
+<p><span class="gold">16 games + impossible challenges</span> - sab free, sab ek hi jagah. Koi download nahi, koi sign-up zaruri nahi. Bas kholo aur khelo!</p>
+<div class="stats">
+<div class="stat"><b>16</b>Games</div>
+<div class="stat"><b>4</b>Challenges</div>
+<div class="stat"><b>12</b>Themes</div>
+<div class="stat"><b>100%</b>Free</div>
+</div>
+<p>🚀 Arcade: Galaxy Shooter, Crazy Knife, Archery<br>🧠 Puzzle: Water Sort, Block Puzzle, Tic Tac Toe<br>🎲 Classics: Ludo, Carrom, Chess, 8 Ball Pool, Air Hockey, Chor Police<br>⚡ Challenges: Impossible Level, Snake, ZigZag Star, Star Stack - sirf 5% players jeet paate hain!</p>
+<p>Roz Daily Reward 🎁, achievements 🏆, aur challenges jeetne par <span class="gold">bade coins + special badges</span> 👑</p>
+<h2>BANAYA KISNE</h2>
+<p>Ye poora hub <span class="gold">Vishal Kumar Yadav</span> ne banaya hai - apne AI assistant ke saath mil kar, ek ek game pyaar se. ❤️</p>
+<h2>CONTACT</h2>
+<p>Feedback ya idea? <a href="mailto:vishalkumaryadav.ec@gmail.com">vishalkumaryadav.ec@gmail.com</a></p>
+<p style="margin-top:18px"><a href="privacy.html">🔒 Privacy Policy</a></p>
+</div>
+</body>
+</html>
