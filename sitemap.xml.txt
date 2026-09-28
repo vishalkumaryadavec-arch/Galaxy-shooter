@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/8ballpool.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/airhockey.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/archery.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/blockpuzzle.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/carrom.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/chess.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/chorpolice.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/crazyknife.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/galaxy.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/impossible.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/ludo.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/snake.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/stack.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/tictactoe.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/watersort.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/zigzag.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/about.html</loc></url>
+  <url><loc>https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/privacy.html</loc></url>
+</urlset>

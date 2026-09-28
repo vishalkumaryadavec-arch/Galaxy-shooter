@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vishalkumaryadavec-arch.github.io/Galaxy-shooter/sitemap.xml
